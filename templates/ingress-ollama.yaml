@@ -1,8 +1,8 @@
-{{- if .Values.ingress.enabled -}}
+{{- if .Values.ingressollama.enabled -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ .Release.Name }}-elastic
+  name: {{ .Release.Name }}-ollama
   labels:
     {{- include "library-chart.labels" . | nindent 4 }}
   annotations:
@@ -12,26 +12,26 @@ metadata:
     {{- end }}
     {{- include "library-chart.ingress.annotations" . | nindent 4 }}
 spec:
-  {{- if and .Values.ingress.ingressClassName (eq "true" (include "library-chart.ingress.supportsIngressClassname" .)) }}
-  ingressClassName: {{ .Values.ingress.ingressClassName | quote }}
+  {{- if and .Values.ingressollama.ingressClassName (eq "true" (include "library-chart.ingress.supportsIngressClassname" .)) }}
+  ingressClassName: {{ .Values.ingressollama.ingressClassName | quote }}
   {{- end }}
-{{- if .Values.ingress.tls }}
+{{- if .Values.ingressollama.tls }}
   tls:
     - hosts:
-        - {{ .Values.ingress.hostname | quote }}
-    {{- if .Values.ingress.useCertManager }}
+        - {{ .Values.ingressollama.hostname | quote }}
+    {{- if .Values.ingressollama.useCertManager }}
       secretName: tls-cert-{{ include "library-chart.fullname" . }}
     {{- end }}
 {{- end }}
   rules:
-    - host: {{ .Values.ingress.hostname | quote }}
+    - host: {{ .Values.ingressollama.hostname | quote }}
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: {{ include "open-webui.service.name" .Subcharts.open-webui }}
+                name: {{ include "common.names.fullname" .Subcharts.open-webui.Subcharts.ollama }}
                 port: 
-                  number: {{ include "open-webui.service.ports.restAPI" .Subcharts.open-webui }}
+                  number: {{ .Values.open-webui.ollama.service.ports.http }}
 {{- end }}

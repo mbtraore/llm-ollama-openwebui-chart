@@ -1,0 +1,37 @@
+{{- if .Values.ingresspipelines.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-pipelines
+  labels:
+    {{- include "library-chart.labels" . | nindent 4 }}
+  annotations:
+    {{- if .Values.open-webui.security.enabled }}
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+    {{- end }}
+    {{- include "library-chart.ingress.annotations" . | nindent 4 }}
+spec:
+  {{- if and .Values.ingresspipelines.ingressClassName (eq "true" (include "library-chart.ingress.supportsIngressClassname" .)) }}
+  ingressClassName: {{ .Values.ingresspipelines.ingressClassName | quote }}
+  {{- end }}
+{{- if .Values.ingresspipelines.tls }}
+  tls:
+    - hosts:
+        - {{ .Values.ingresspipelines.hostname | quote }}
+    {{- if .Values.ingresspipelines.useCertManager }}
+      secretName: tls-cert-{{ include "library-chart.fullname" . }}
+    {{- end }}
+{{- end }}
+  rules:
+    - host: {{ .Values.ingresspipelines.hostname | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "common.names.fullname" .Subcharts.open-webui.Subcharts.pipelines }}
+                port: 
+                  number: {{ .Values.open-webui.pipelines.service.ports.http }}
+{{- end }}

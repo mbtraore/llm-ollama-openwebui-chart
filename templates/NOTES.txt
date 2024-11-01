@@ -1,22 +1,67 @@
-1. Get the application URL by running these commands:
-{{- if .Values.ingress.enabled }}
-{{- range $host := .Values.ingress.hosts }}
-  {{- range .paths }}
-  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
-  {{- end }}
+{{- $pvcList := list }}
+{{- $replicas := int .Values.open-webui.master.replicaCount }}
+{{- range $e, $i := until $replicas }}
+{{- $pvcList = append $pvcList (printf "%s-%s-%d" "data-elastic-open-webui" "master" $i) }}
 {{- end }}
-{{- else if contains "NodePort" .Values.service.type }}
-  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "llm-ollama-openwebui-chart.fullname" . }})
-  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
-  echo http://$NODE_IP:$NODE_PORT
-{{- else if contains "LoadBalancer" .Values.service.type }}
-     NOTE: It may take a few minutes for the LoadBalancer IP to be available.
-           You can watch its status by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "llm-ollama-openwebui-chart.fullname" . }}'
-  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "llm-ollama-openwebui-chart.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
-  echo http://$SERVICE_IP:{{ .Values.service.port }}
-{{- else if contains "ClusterIP" .Values.service.type }}
-  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "llm-ollama-openwebui-chart.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
-  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
-  echo "Visit http://127.0.0.1:8080 to use your application"
-  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
+{{- $replicasdata := int .Values.open-webui.data.replicaCount }}
+{{- range $e, $i := until $replicasdata }}
+{{- $pvcList = append $pvcList (printf "%s-%s-%d" "data-elastic-open-webui" "data" $i) }}
+{{- end }}
+
+{{- if eq .Values.userPreferences.language "fr" }}
+
+{{- if .Values.open-webui.security.enabled }}
+- Votre nom d'utilisateur est **elastic**
+- Votre mot de passe est **{{ .Values.open-webui.security.elasticPassword }}**
+{{- end }}
+
+{{- if .Values.ingress.enabled }}
+- Vous pouvez vous connecter à elastic avec votre navigateur à ce [lien](http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .Values.ingress.hostname }})
+{{- end }}
+{{- if .Values.route.enabled }}
+- Vous pouvez vous connecter à elastic avec votre navigateur à ce [lien](https://{{ .Values.route.hostname }})
+{{- end }}
+- Vous pouvez vous connectez à elastic depuis l'intérieur du datalab à cette URL : **https://{{ .Release.Name }}-open-webui:{{ .Values.open-webui.service.ports.restAPI }}**
+{{- if .Values.ingressOllama.enabled }}
+- Vous pouvez vous connecter à Ollama avec votre navigateur à ce [lien](http{{ if $.Values.ingressOllama.tls }}s{{ end }}://{{ .Values.ingressOllama.hostname }})
+{{- end }}
+{{- if .Values.routeOllama.enabled }}
+- Vous pouvez vous connecter à Ollama avec votre navigateur à ce [lien](https://{{ .Values.routeOllama.hostname }})
+{{- end }}
+- Un seul cluster de {{ .Chart.Name }} peut être démarré dans un projet
+
+**NOTES sur la suppression :**
+
+- **Vous pouvez supprimer ce chart en toute sécurité et en recréer un plus tard**
+- Les volumes de données ne seront pas supprimés
+- Si vous démarrez un nouveau {{ .Chart.Name }}, il réutilisera ces volumes en silence.
+- Si vous souhaitez supprimer définitivement ces volumes : `kubectl delete pvc {{ join " " $pvcList }}`
+{{- else }}
+
+{{- if .Values.open-webui.security.enabled }}
+- Your username is **elastic** 
+- Your password is **{{ .Values.open-webui.security.elasticPassword}}**
+{{- end }}
+
+{{- if .Values.ingress.enabled }}
+- You can connect to elastic with your browser on this [link](http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .Values.ingress.hostname }})
+{{- end }}
+{{- if .Values.route.enabled }}
+- You can connect to elastic with your browser on this [link](https://{{ .Values.route.hostname }})
+{{- end }}
+- You can connect to elastic from inside the datalab at this url : **https://{{ .Release.Name }}-open-webui:{{ .Values.open-webui.service.ports.restAPI }}**
+{{- if .Values.ingressOllama.enabled }}
+- You can connect to Ollama with your browser on this [link](http{{ if $.Values.ingressOllama.tls }}s{{ end }}://{{ .Values.ingressOllama.hostname }})
+{{- end }}
+{{- if .Values.routeOllama.enabled }}
+- You can connect to Ollama with your browser on this [link](https://{{ .Values.routeOllama.hostname }})
+{{- end }}
+- Only one cluster of {{ .Chart.Name }} can be started in a project
+
+*NOTES about deletion :*
+
+- **You can safely delete this chart and recreate one later**
+- Data volumes will not be deleted
+- If you start a new {{ .Chart.Name }}, it will reuse those volumes silently.
+- If you want to delete those volumes definitely : `kubectl delete pvc {{ join " " $pvcList }}`
 {{- end }}
